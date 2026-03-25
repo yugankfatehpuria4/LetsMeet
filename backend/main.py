@@ -31,13 +31,24 @@ except Exception:
     pass
 
 # Core events
-from vision_agents.core.events import (
-    CallSessionParticipantJoinedEvent,
-    CallSessionParticipantLeftEvent,
-    CallSessionStartedEvent,
-    CallSessionEndedEvent,
-    PluginErrorEvent
-)
+# Note: vision-agents versions differ in where these are exported from.
+# Prefer vision_agents.core.events, but fall back to getstream.models when needed.
+try:
+    from vision_agents.core.events import (
+        CallSessionParticipantJoinedEvent,
+        CallSessionParticipantLeftEvent,
+        CallSessionStartedEvent,
+        CallSessionEndedEvent,
+        PluginErrorEvent,
+    )
+except ImportError:
+    from getstream.models import (  # type: ignore
+        CallSessionParticipantJoinedEvent,
+        CallSessionParticipantLeftEvent,
+        CallSessionStartedEvent,
+        CallSessionEndedEvent,
+    )
+    from vision_agents.core.events import PluginErrorEvent
 
 # LLM events
 from vision_agents.core.llm.events import (
