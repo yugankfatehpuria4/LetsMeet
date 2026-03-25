@@ -1,0 +1,22 @@
+# Robots.txt for LetsMeet
+# Allow all crawlers to access the site
+User-agent: *
+Allow: /
+
+# Disallow access to API routes (for security)
+Disallow: /api/
+
+# Disallow access to admin areas (if any)
+Disallow: /admin/
+
+# Disallow access to private meeting rooms (handled by dynamic routes)
+Disallow: /meeting/
+
+# Allow access to sitemap
+Allow: /sitemap.xml
+
+# Crawl delay to be respectful
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://letsmeet.ai/sitemap.xml

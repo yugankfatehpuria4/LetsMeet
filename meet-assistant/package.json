@@ -1,0 +1,32 @@
+{
+  "name": "meet-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001 --webpack",
+    "build": "NEXT_DISABLE_ESLINT=1 next build --webpack",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
+    "@stream-io/node-sdk": "^0.7.32",
+    "@stream-io/video-react-sdk": "^1.30.1",
+    "mongodb": "^7.1.0",
+    "mongoose": "^8.8.0",
+    "next": "16.1.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "stream-chat": "^9.27.2",
+    "stream-chat-react": "^13.13.1",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.1.1",
+    "tailwindcss": "^4"
+  }
+}

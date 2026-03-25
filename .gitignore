@@ -1,0 +1,18 @@
+# Ignore nested git metadata from subprojects
+backend/.git/
+meet-assistant/.git/
+
+# For Vercel we only deploy the Next.js app.
+# The Python bot in `backend/` is deployed separately.
+backend/
+
+# Python
+backend/.venv/
+backend/__pycache__/
+backend/*.egg-info/
+
+# Node / Next.js
+meet-assistant/node_modules/
+meet-assistant/.next/
+meet-assistant/out/
+

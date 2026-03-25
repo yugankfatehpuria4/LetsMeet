@@ -1,0 +1,224 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #05070f;
+  --bg-elevated: #0f172a;
+  --neon: #00f5ff;
+  --neon-dim: rgba(0, 245, 255, 0.5);
+  --accent-blue: #3b82f6;
+  --cyber-purple: #8b5cf6;
+  --danger: #ff3b3b;
+  --text: #e5e7eb;
+  --text-muted: #9ca3af;
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--text);
+  --font-sans: var(--font-exo2), system-ui, sans-serif;
+  --font-display: var(--font-orbitron), system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+canvas {
+  filter: drop-shadow(0 0 20px #00ffff);
+}
+
+/* Cyber grid background */
+.bg-cyber {
+  background-color: #020617;
+  background-image: linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* Gradient overlay on grid */
+.bg-mesh {
+  background-color: #05070f;
+  background-image: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(0, 245, 255, 0.08), transparent 50%),
+    linear-gradient(180deg, #05070f 0%, #020617 50%, #0f172a 100%);
+}
+
+.bg-mesh-with-grid {
+  background-color: #05070f;
+  background-image: linear-gradient(rgba(0, 245, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  position: relative;
+}
+.bg-mesh-with-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 40% at 50% 0%, rgba(0, 245, 255, 0.06), transparent 50%);
+  pointer-events: none;
+}
+
+/* Glass HUD panels */
+.glass {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 245, 255, 0.2);
+}
+
+.glass-panel {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 245, 255, 0.25);
+}
+
+/* Neon glow */
+.glow {
+  box-shadow: 0 0 10px var(--neon-dim), 0 0 20px rgba(0, 245, 255, 0.15);
+}
+.glow-strong {
+  box-shadow: 0 0 15px var(--neon-dim), 0 0 30px rgba(0, 245, 255, 0.2), 0 0 45px rgba(0, 245, 255, 0.1);
+}
+.glow-hover:hover {
+  box-shadow: 0 0 15px var(--neon-dim), 0 0 25px rgba(0, 245, 255, 0.2);
+}
+
+/* Font display (Orbitron) for titles */
+.font-display {
+  font-family: var(--font-orbitron), system-ui, sans-serif;
+}
+
+/* Scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 245, 255, 0.2);
+  border-radius: 3px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 245, 255, 0.35);
+}
+
+/* Holographic HUD panels - neon border + glow */
+.hud-panel {
+  background: rgba(2, 6, 23, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 245, 255, 0.4);
+  box-shadow: 0 0 15px rgba(0, 245, 255, 0.2), 0 0 30px rgba(0, 245, 255, 0.1), inset 0 0 30px rgba(0, 245, 255, 0.03);
+}
+.hud-panel-cut {
+  clip-path: polygon(0% 12px, 12px 0%, calc(100% - 12px) 0%, 100% 12px, 100% calc(100% - 12px), calc(100% - 12px) 100%, 12px 100%, 0% calc(100% - 12px));
+}
+
+/* Cyber terminal text glow */
+.terminal-text {
+  color: #00f5ff;
+  text-shadow: 0 0 8px rgba(0, 245, 255, 0.6);
+}
+
+/* Control bar buttons - spaceship style (targets Stream + our wrappers) */
+.hud-controls button,
+[str-data-cid] .str-video__call-controls button,
+[str-data-cid] [class*="call-controls"] button {
+  border: 1px solid rgba(0, 245, 255, 0.4) !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  transition: transform 0.2s, box-shadow 0.2s !important;
+}
+.hud-controls button:hover,
+[str-data-cid] .str-video__call-controls button:hover,
+[str-data-cid] [class*="call-controls"] button:hover {
+  box-shadow: 0 0 20px rgba(0, 245, 255, 0.4) !important;
+  transform: scale(1.08);
+}
+[str-data-cid] .str-video__call-controls button[str-data-leave-call] {
+  border-color: rgba(255, 59, 59, 0.6) !important;
+  background: rgba(255, 59, 59, 0.15) !important;
+}
+[str-data-cid] .str-video__call-controls button[str-data-leave-call]:hover {
+  box-shadow: 0 0 20px rgba(255, 59, 59, 0.4) !important;
+}
+
+/* Video area - force dark HUD look */
+[str-data-cid] .str-video__participant-list,
+[str-data-cid] [class*="speaker-layout"] {
+  background: rgba(2, 6, 23, 0.5) !important;
+}
+
+/* Stream SDK */
+[str-data-cid] {
+  --str-video-background-color: #0f172a;
+  --str-video-primary-color: #00f5ff;
+}
+
+/* Waveform bars for "listening" state */
+@keyframes waveform {
+  0%, 100% { transform: scaleY(0.4); }
+  50% { transform: scaleY(1); }
+}
+
+@keyframes progress-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+.progress-pulse {
+  animation: progress-pulse 1.5s ease-in-out infinite;
+  will-change: opacity;
+}
+
+@keyframes ai-loading-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes ai-loading-pulse {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Optimize animations with GPU acceleration */
+.ai-loading-spin {
+  animation: ai-loading-spin 8s linear infinite;
+  will-change: transform;
+}
+
+.ai-loading-spin-reverse {
+  animation: ai-loading-spin 8s linear infinite reverse;
+  will-change: transform;
+}
+
+.ai-loading-pulse {
+  animation: ai-loading-pulse 2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+/* Waveform bar - listening animation (animationDelay via inline style) */
+.waveform-bar {
+  animation: waveform 1s ease-in-out infinite;
+  animation-fill-mode: both;
+  transform-origin: center;
+  will-change: transform;
+}
+
+/* Smooth scrolling optimization */
+.scrollbar-thin {
+  scroll-behavior: smooth;
+}
+
+/* Reduce paint on hover for better performance */
+.hud-controls button {
+  transition: transform 0.2s ease-out;
+  will-change: transform;
+}
+
+.hud-controls button:hover {
+  transform: scale(1.08);
+}
