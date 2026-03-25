@@ -32,7 +32,7 @@ except Exception:
 
 # Core events
 # Note: vision-agents versions differ in where these are exported from.
-# Prefer vision_agents.core.events, but fall back to getstream.models when needed.
+# Prefer vision_agents.core.events, but fall back to getstream.models / core.events.base.
 try:
     from vision_agents.core.events import (
         CallSessionParticipantJoinedEvent,
@@ -41,14 +41,22 @@ try:
         CallSessionEndedEvent,
         PluginErrorEvent,
     )
-except ImportError:
+except Exception:
+    # Stream call/session events are always available via getstream.models
     from getstream.models import (  # type: ignore
         CallSessionParticipantJoinedEvent,
         CallSessionParticipantLeftEvent,
         CallSessionStartedEvent,
         CallSessionEndedEvent,
     )
-    from vision_agents.core.events import PluginErrorEvent
+    # PluginErrorEvent may not be re-exported in some vision-agents builds
+    try:
+        from vision_agents.core.events import PluginErrorEvent
+    except Exception:
+        try:
+            from vision_agents.core.events.base import PluginErrorEvent  # type: ignore
+        except Exception:
+            PluginErrorEvent = None  # type: ignore[misc,assignment]
 
 # LLM events
 from vision_agents.core.llm.events import (
@@ -267,11 +275,12 @@ async def start_agent(call_id: str):
         logger.info(f"📊 Final Stats:")
         logger.info(f"   - Transcript entries: {len(meeting_data['transcript'])}")
     
-    @agent.events.subscribe
-    async def handle_errors(event: PluginErrorEvent):
-        logger.error(f"❌ Plugin error: {event.error_message}")
-        if event.is_fatal:
-            logger.error("🚨 Fatal error")
+    if PluginErrorEvent is not None:
+        @agent.events.subscribe
+        async def handle_errors(event: PluginErrorEvent):
+            logger.error(f"❌ Plugin error: {getattr(event, 'error_message', event)}")
+            if getattr(event, "is_fatal", False):
+                logger.error("🚨 Fatal error")
     
     flush_task = asyncio.create_task(flush_loop())
 
