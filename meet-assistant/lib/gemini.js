@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY;
+const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-1.5-flash";
 
 if (!GEMINI_API_KEY) {
   console.warn(
@@ -12,6 +13,9 @@ let client;
 
 function getClient() {
   if (!client) {
+    if (!GEMINI_API_KEY) {
+      throw new Error("GEMINI_API_KEY is not configured");
+    }
     client = new GoogleGenerativeAI(GEMINI_API_KEY);
   }
   return client;
@@ -23,44 +27,48 @@ export async function generateMeetingSummary(transcriptText) {
   }
 
   const genAI = getClient();
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   const prompt = `
-You are an AI meeting assistant.
+You are an expert executive meeting assistant.
 
-Summarize the following meeting transcript.
+Summarize the following meeting transcript clearly into key bullet points and decisions.
 
-Return JSON with this exact structure:
+Return JSON ONLY with this exact structure (do not include markdown code block formatting if possible):
 {
-  "key_points": [ "point 1", "point 2", ... ],
-  "decisions": [ "decision 1", "decision 2", ... ],
-  "action_items": [ "item 1", "item 2", ... ],
-  "next_steps": [ "step 1", "step 2", ... ]
+  "key_points": [ "Key point 1", "Key point 2" ],
+  "decisions": [ "Decision 1" ],
+  "action_items": [ "Action item description" ],
+  "next_steps": [ "Next step 1" ]
 }
 
 MEETING TRANSCRIPT:
 ${transcriptText}
 `;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-
-  let parsed;
   try {
-    // Try to extract JSON from the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
-  } catch (err) {
-    // Fallback: wrap plain text as a single key_point
-    parsed = {
-      key_points: [text],
-      decisions: [],
-      action_items: [],
-      next_steps: [],
-    };
-  }
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
 
-  return parsed;
+    let parsed;
+    try {
+      const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+    } catch (err) {
+      parsed = {
+        key_points: [text.trim()],
+        decisions: [],
+        action_items: [],
+        next_steps: [],
+      };
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error("Gemini API generateMeetingSummary error:", err);
+    throw err;
+  }
 }
 
 /**
@@ -73,7 +81,7 @@ export async function extractActionItems(transcriptText) {
   }
 
   const genAI = getClient();
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   const prompt = `
 You are an AI meeting assistant.
@@ -81,15 +89,14 @@ You are an AI meeting assistant.
 Extract action items from this meeting transcript.
 
 For each action item, identify:
-- Task: what needs to be done (short, clear)
+- Task: what needs to be done (short, clear, actionable)
 - Assigned Person: who is responsible (name or "Unassigned" if not mentioned)
 - Deadline: when it is due (date or description, or "Not specified" if not mentioned)
 
 Return JSON with this exact structure:
 {
   "action_items": [
-    { "task": "...", "assigned_to": "...", "deadline": "..." },
-    ...
+    { "task": "...", "assigned_to": "...", "deadline": "..." }
   ]
 }
 
@@ -99,22 +106,27 @@ MEETING TRANSCRIPT:
 ${transcriptText}
 `;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text();
-
-  let parsed;
   try {
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+
+    let parsed;
+    try {
+      const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/gi, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+    } catch (err) {
+      parsed = { action_items: [] };
+    }
+
+    const items = Array.isArray(parsed.action_items) ? parsed.action_items : [];
+    return items.map((item) => ({
+      task: String(item.task || '').trim() || 'Task',
+      assigned_to: String(item.assigned_to || '').trim() || 'Unassigned',
+      deadline: String(item.deadline || '').trim() || 'Not specified',
+    }));
   } catch (err) {
-    parsed = { action_items: [] };
+    console.error("Gemini API extractActionItems error:", err);
+    return [];
   }
-
-  const items = Array.isArray(parsed.action_items) ? parsed.action_items : [];
-  return items.map((item) => ({
-    task: String(item.task || '').trim() || 'Task',
-    assigned_to: String(item.assigned_to || '').trim() || 'Unassigned',
-    deadline: String(item.deadline || '').trim() || 'Not specified',
-  }));
 }
-

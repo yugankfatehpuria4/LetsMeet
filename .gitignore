@@ -1,3 +1,7 @@
+# macOS
+.DS_Store
+*.DS_Store
+
 # Ignore nested git metadata from subprojects
 backend/.git/
 meet-assistant/.git/
@@ -14,6 +18,5 @@ backend/*.log
 meet-assistant/node_modules/
 meet-assistant/.next/
 meet-assistant/out/
-
 meet-assistant/.env
-
+meet-assistant/.env.local

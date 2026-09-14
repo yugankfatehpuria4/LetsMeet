@@ -19,6 +19,10 @@ const ActionItemSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    completed: {
+      type: Boolean,
+      default: false,
+    },
     created_at: {
       type: Date,
       default: Date.now,

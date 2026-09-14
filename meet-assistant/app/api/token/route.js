@@ -1,7 +1,7 @@
 import { StreamClient } from "@stream-io/node-sdk";
 
-const apikey = process.env.STREAM_API_KEY;
-const apiSecret = process.env.STREAM_API_SECRET;
+const apiKey = process.env.STREAM_API_KEY || process.env.NEXT_PUBLIC_STREAM_API_KEY;
+const apiSecret = process.env.STREAM_API_SECRET || process.env.STREAM_SECRET_KEY;
 
 export async function POST(request) {
     try {
@@ -9,33 +9,63 @@ export async function POST(request) {
         try {
             body = await request.json();
         } catch (e) {
-            // Handle cases where the client sends an empty body
             body = {};
         }
-        const { userId } = body;
-        if(!apikey || !apiSecret) {
-            return Response.json({error: "API key or secret not configured"}, {status: 500});
+
+        let { userId, name, role } = body;
+
+        if (!apiKey || !apiSecret) {
+            return Response.json(
+                { error: "Stream API credentials are not properly configured" },
+                { status: 500 }
+            );
         }
-        if(!userId) {
-            return Response.json({ error: "userId is required" }, { status: 400 });
+
+        if (!userId || typeof userId !== "string") {
+            return Response.json(
+                { error: "Valid userId string is required" },
+                { status: 400 }
+            );
         }
-        const serverClient = new StreamClient(apikey, apiSecret);
+
+        // Sanitize userId for Stream compatibility (lowercase alphanumeric and hyphens/underscores)
+        const sanitizedUserId = userId
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9_@-]/g, "-")
+            .slice(0, 64) || "user-" + Date.now();
+
+        const serverClient = new StreamClient(apiKey, apiSecret);
+        
+        const userRole = role === "admin" ? "admin" : "user";
+        const displayName = name ? String(name).trim() : `User ${sanitizedUserId}`;
+
         const newUser = {
-            id: userId,
-            role: "admin",
-            name: "User " + userId
+            id: sanitizedUserId,
+            role: userRole,
+            name: displayName,
         };
+
         await serverClient.upsertUsers([newUser]);
+
         const now = Math.floor(Date.now() / 1000);
-        const validity = 60 * 60 * 24; // 30 days
+        const validity = 60 * 60 * 24; // 24 hours
+
         const token = serverClient.generateUserToken({
-            user_id : userId,
+            user_id: sanitizedUserId,
             validity_in_seconds: validity,
-            iat: now-60,
+            iat: now - 60,
         });
-        return Response.json({token}, {status: 200});
+
+        return Response.json(
+            { token, userId: sanitizedUserId },
+            { status: 200 }
+        );
     } catch (error) {
-        console.error("Error generating token:", error);
-        return Response.json({error: "Failed to Generate Token"}, {status: 500});
+        console.error("Error generating Stream token:", error);
+        return Response.json(
+            { error: "Failed to generate video token" },
+            { status: 500 }
+        );
     }
 }

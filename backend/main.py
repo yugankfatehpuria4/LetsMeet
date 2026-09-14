@@ -1,8 +1,24 @@
 import asyncio
 import os
+import sys
+import ssl
 import logging
 from uuid import uuid4
 from dotenv import load_dotenv
+
+# Fix macOS SSL certificate verification for GetStream WebSockets / WSS connections
+try:
+    import certifi
+    os.environ["SSL_CERT_FILE"] = certifi.where()
+    os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
+    ssl._create_default_https_context = lambda: ssl_context
+except Exception:
+    try:
+        ssl._create_default_https_context = ssl._create_unverified_context
+    except Exception:
+        pass
+
 import pymongo
 
 # Vision Agents imports
@@ -80,11 +96,26 @@ logging.getLogger("getstream.video.rtc.audio_track").setLevel(logging.ERROR)
 # Load environment variables
 load_dotenv()
 
-# MongoDB setup
+# Environment verification
+STREAM_API_KEY = os.getenv("STREAM_API_KEY")
+STREAM_API_SECRET = os.getenv("STREAM_API_SECRET")
 MONGODB_URI = os.getenv("MONGODB_URI")
-mongo_client = pymongo.MongoClient(MONGODB_URI)
-db = mongo_client["letsmeet"]
-transcripts_collection = db["transcripts"]
+
+if not STREAM_API_KEY or not STREAM_API_SECRET:
+    logger.warning("⚠️ STREAM_API_KEY or STREAM_API_SECRET is missing from environment!")
+
+if not MONGODB_URI:
+    logger.warning("⚠️ MONGODB_URI is missing from environment! Transcripts won't be saved to MongoDB.")
+    transcripts_collection = None
+else:
+    try:
+        mongo_client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        db = mongo_client["letsmeet"]
+        transcripts_collection = db["transcripts"]
+        logger.info("✅ MongoDB connected successfully")
+    except Exception as e:
+        logger.error(f"❌ Failed to connect to MongoDB: {e}")
+        transcripts_collection = None
 
 # Meeting data storage
 meeting_data = {
@@ -156,10 +187,11 @@ async def start_agent(call_id: str):
             transcript_buffer.clear()
 
         try:
-            # Run sync pymongo in a worker thread so the event loop stays responsive.
-            await asyncio.to_thread(
-                transcripts_collection.insert_many, batch, False
-            )
+            if transcripts_collection is not None:
+                # Run sync pymongo in a worker thread so the event loop stays responsive.
+                await asyncio.to_thread(
+                    transcripts_collection.insert_many, batch, False
+                )
         except Exception as e:
             logger.error(f"❌ Failed to flush transcript buffer: {e}")
 

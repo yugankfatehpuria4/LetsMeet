@@ -27,3 +27,40 @@ export async function GET(request) {
     );
   }
 }
+
+export async function PATCH(request) {
+  try {
+    const body = await request.json();
+    const { id, completed } = body;
+
+    if (!id) {
+      return Response.json(
+        { ok: false, message: "Action item ID is required" },
+        { status: 400 }
+      );
+    }
+
+    await connectToDatabase();
+
+    const item = await ActionItem.findByIdAndUpdate(
+      id,
+      { $set: { completed: Boolean(completed) } },
+      { new: true }
+    );
+
+    if (!item) {
+      return Response.json(
+        { ok: false, message: "Action item not found" },
+        { status: 404 }
+      );
+    }
+
+    return Response.json({ ok: true, item }, { status: 200 });
+  } catch (error) {
+    console.error("Error updating action item:", error);
+    return Response.json(
+      { ok: false, message: "Failed to update action item" },
+      { status: 500 }
+    );
+  }
+}

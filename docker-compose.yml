@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # MongoDB database service
+  mongodb:
+    image: mongo:7.0
+    container_name: letsmeet-mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: letsmeet
+    volumes:
+      - mongo-data:/data/db
+
+  # Next.js Frontend App
+  frontend:
+    build:
+      context: ./meet-assistant
+      dockerfile: Dockerfile
+    container_name: letsmeet-frontend
+    restart: always
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      - MONGODB_URI=mongodb://mongodb:27017/letsmeet
+      - STREAM_API_KEY=${STREAM_API_KEY}
+      - STREAM_API_SECRET=${STREAM_API_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - NEXT_PUBLIC_STREAM_API_KEY=${NEXT_PUBLIC_STREAM_API_KEY}
+      - NEXT_PUBLIC_CALL_ID=demo-meeting-room
+    depends_on:
+      - mongodb
+
+  # Python AI Bot Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: letsmeet-ai-bot
+    restart: always
+    environment:
+      - STREAM_API_KEY=${STREAM_API_KEY}
+      - STREAM_API_SECRET=${STREAM_API_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - MONGODB_URI=mongodb://mongodb:27017/letsmeet
+      - CALL_ID=demo-meeting-room
+    depends_on:
+      - mongodb
+
+volumes:
+  mongo-data:
