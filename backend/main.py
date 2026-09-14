@@ -1,3 +1,7 @@
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import asyncio
 import os
 import sys
@@ -96,22 +100,27 @@ load_dotenv()
 
 STREAM_API_KEY = os.getenv("STREAM_API_KEY")
 STREAM_API_SECRET = os.getenv("STREAM_API_SECRET")
-MONGODB_URI = os.getenv("MONGODB_URI")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://127.0.0.1:27017/letsmeet")
 
 if not STREAM_API_KEY or not STREAM_API_SECRET:
     logger.warning("⚠️ STREAM_API_KEY or STREAM_API_SECRET is missing from environment!")
 
-if not MONGODB_URI:
-    logger.warning("⚠️ MONGODB_URI is missing from environment! Transcripts won't be saved to MongoDB.")
-    transcripts_collection = None
-else:
+try:
+    mongo_client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=3000)
+    mongo_client.admin.command('ping')
+    db = mongo_client["letsmeet"]
+    transcripts_collection = db["transcripts"]
+    logger.info("✅ MongoDB connected successfully")
+except Exception:
     try:
-        mongo_client = pymongo.MongoClient(MONGODB_URI, serverSelectionTimeoutMS=5000)
+        fallback_uri = "mongodb://127.0.0.1:27017/letsmeet"
+        mongo_client = pymongo.MongoClient(fallback_uri, serverSelectionTimeoutMS=2000)
+        mongo_client.admin.command('ping')
         db = mongo_client["letsmeet"]
         transcripts_collection = db["transcripts"]
-        logger.info("✅ MongoDB connected successfully")
-    except Exception as e:
-        logger.error(f"❌ Failed to connect to MongoDB: {e}")
+        logger.info("✅ Connected to local MongoDB fallback (mongodb://127.0.0.1:27017)")
+    except Exception:
+        logger.warning("⚠️ MongoDB is not accessible. Running with in-memory transcript buffer.")
         transcripts_collection = None
 
 # Active room bots registry
