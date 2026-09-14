@@ -14,12 +14,14 @@ import TranscriptPanel from "./transcript";
 import SummaryPanel from "./summary-panel";
 
 const AILoading = dynamic(() => import("./AILoading"), { ssr: false });
+const BOT_SERVER_URL = process.env.NEXT_PUBLIC_BOT_SERVER_URL || "http://localhost:8000";
 
 const MeetingRoom = memo(({ callId, onLeave, userId }) => {
   const client = useStreamVideoClient();
   const [call, setCall] = useState(null);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [botStatus, setBotStatus] = useState("CONNECTING");
   const joinedRef = useRef(false);
   const leavingRef = useRef(false);
   const callType = "default";
@@ -32,6 +34,36 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
     });
   }, [callId]);
 
+  const notifyBotServerToJoin = useCallback(async (roomCode) => {
+    try {
+      const res = await fetch(`${BOT_SERVER_URL}/join`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ call_id: roomCode }),
+      });
+      if (res.ok) {
+        setBotStatus("ONLINE");
+      } else {
+        setBotStatus("CAPTIONS_ONLY");
+      }
+    } catch {
+      // Backend bot server not running locally; fallback to browser captions
+      setBotStatus("CAPTIONS_ONLY");
+    }
+  }, []);
+
+  const notifyBotServerToLeave = useCallback(async (roomCode) => {
+    try {
+      await fetch(`${BOT_SERVER_URL}/leave`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ call_id: roomCode }),
+      });
+    } catch {
+      // Ignore if bot server is unreachable
+    }
+  }, []);
+
   const handleLeaveClick = useCallback(async () => {
     if (leavingRef.current) {
       onLeave?.();
@@ -40,6 +72,7 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
     leavingRef.current = true;
     try {
       if (callId) {
+        notifyBotServerToLeave(callId);
         // Trigger summary generation and mark meeting ended in background
         Promise.all([
           fetch("/api/summary", {
@@ -67,7 +100,7 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
     } finally {
       onLeave?.();
     }
-  }, [callId, call, onLeave]);
+  }, [callId, call, onLeave, notifyBotServerToLeave]);
 
   useEffect(() => {
     if (!client || joinedRef.current) return;
@@ -76,7 +109,6 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
     const init = async () => {
       try {
         const myCall = client.call(callType, callId);
-        // Must match the bot user id used by your external meeting assistant service (python).
         const meetingAssistantId = "meeting-assistant-bot";
         await myCall.getOrCreate({
           data: {
@@ -91,6 +123,9 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
         await myCall.startClosedCaptions({ language: "en" });
         myCall.on("call.session_ended", () => onLeave?.());
         setCall(myCall);
+
+        // Notify Python Bot Server to join this WebRTC call
+        notifyBotServerToJoin(callId);
 
         // Register participant in DB
         fetch("/api/meetings", {
@@ -117,7 +152,7 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
         call.leave().catch(() => {});
       }
     };
-  }, [client, callId, userId, onLeave, call]);
+  }, [client, callId, userId, onLeave, call, notifyBotServerToJoin]);
 
   if (error) {
     return (
@@ -184,9 +219,13 @@ const MeetingRoom = memo(({ callId, onLeave, userId }) => {
             System Status
           </p>
           <div className="flex flex-wrap gap-x-6 gap-y-1 text-(--text-muted) text-xs font-mono">
-            <span className="text-(--neon)">● AI ASSISTANT ONLINE</span>
-            <span>● TRANSCRIPTION ACTIVE</span>
-            <span>● STREAM CONNECTION STABLE</span>
+            {botStatus === "ONLINE" ? (
+              <span className="text-(--neon) font-bold animate-pulse">● AI BOT SERVER ONLINE</span>
+            ) : (
+              <span className="text-cyan-300">● REAL-TIME CAPTIONS ACTIVE</span>
+            )}
+            <span>● STREAM WEBRTC STABLE</span>
+            <span>● MONGO DB SYNC ACTIVE</span>
           </div>
         </div>
 
